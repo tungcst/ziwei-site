@@ -1,3 +1,4 @@
+// api/chart.js
 const gen = require('../lib/generateChart');
 
 module.exports = (req, res) => {
