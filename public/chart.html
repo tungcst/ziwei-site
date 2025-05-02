@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>紫微斗數命盤排盤</title>
+  <!-- 引入 iztro 紫微斗數排盤庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/iztro/dist/iztro.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .controls {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .controls label {
+      margin: 0 10px;
+    }
+    .controls input[type="date"] {
+      padding: 5px;
+      font-size: 1em;
+    }
+    .controls select, .controls input[type="radio"], .controls input[type="checkbox"] {
+      margin: 0 5px;
+      font-size: 1em;
+    }
+    .controls button {
+      padding: 5px 15px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    /* 命盤表格樣式 */
+    .chart-table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 800px;
+    }
+    .chart-table td {
+      border: 1px solid #000;
+      vertical-align: top;
+      width: 25%;
+      height: 100px;
+      position: relative;
+      padding: 4px;
+    }
+    /* 中宮併列2x2，加粗邊框以區分 */
+    #center {
+      border: 2px solid #000;
+    }
+    .palace-name {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    .stars {
+      font-size: 0.95em;
+      line-height: 1.5;
+    }
+    .stars br {
+      margin-bottom: 2px;
+    }
+    .limit-info {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 0.85em;
+      text-align: right;
+      color: #000;
+    }
+    .limit-info .current-year {
+      color: #d00;
+      font-weight: bold;
+      margin-right: 4px;
+    }
+    /* 若需要更明顯，可為「流年」標記加底色 */
+    /* .limit-info .current-year { background: yellow; } */
+  </style>
+</head>
+<body>
+
+<h1>紫微斗數命盤排盤</h1>
+
+<div class="controls">
+  <label>
+    出生日期：
+    <input type="date" id="birthDate" />
+  </label>
+  <label>
+    時辰：
+    <select id="birthTime">
+      <option value="0">早子時(23:00~00:59)</option>
+      <option value="1">丑時(01:00~02:59)</option>
+      <option value="2">寅時(03:00~04:59)</option>
+      <option value="3">卯時(05:00~06:59)</option>
+      <option value="4">辰時(07:00~08:59)</option>
+      <option value="5">巳時(09:00~10:59)</option>
+      <option value="6">午時(11:00~12:59)</option>
+      <option value="7">未時(13:00~14:59)</option>
+      <option value="8">申時(15:00~16:59)</option>
+      <option value="9">酉時(17:00~18:59)</option>
+      <option value="10">戌時(19:00~20:59)</option>
+      <option value="11">亥時(21:00~22:59)</option>
+      <option value="12">晚子時(23:00~00:59)</option>
+    </select>
+  </label>
+  <label>
+    性別：
+    <input type="radio" name="gender" value="男" id="genderMale" checked /> 男
+    <input type="radio" name="gender" value="女" id="genderFemale" /> 女
+  </label>
+  <label>
+    曆法：
+    <input type="radio" name="calendar" value="solar" id="calSolar" checked /> 陽曆
+    <input type="radio" name="calendar" value="lunar" id="calLunar" /> 陰曆
+  </label>
+  <label>
+    <input type="checkbox" id="leapMonth" disabled /> 閏月
+  </label>
+  <button id="calculateBtn">排盤</button>
+</div>
+
+<!-- 命盤12宮格 + 中宮布局 -->
+<table class="chart-table">
+  <tr>
+    <td id="palace3"></td>
+    <td id="palace4"></td>
+    <td id="palace5"></td>
+    <td id="palace6"></td>
+  </tr>
+  <tr>
+    <td id="palace2"></td>
+    <td id="center" colspan="2" rowspan="2">
+      <!-- 中宮內容將由腳本動態填入 -->
+    </td>
+    <td id="palace7"></td>
+  </tr>
+  <tr>
+    <td id="palace1"></td>
+    <td id="palace8"></td>
+  </tr>
+  <tr>
+    <td id="palace0"></td>
+    <td id="palace11"></td>
+    <td id="palace10"></td>
+    <td id="palace9"></td>
+  </tr>
+</table>
+
+<script>
+  // 當切換陽曆/陰曆選項時，啟用或禁用「閏月」勾選框
+  document.getElementById('calSolar').addEventListener('change', function() {
+    if (this.checked) {
+      document.getElementById('leapMonth').checked = false;
+      document.getElementById('leapMonth').disabled = true;
+    }
+  });
+  document.getElementById('calLunar').addEventListener('change', function() {
+    if (this.checked) {
+      document.getElementById('leapMonth').disabled = false;
+    }
+  });
+
+  // 生成命盤按鈕事件
+  document.getElementById('calculateBtn').addEventListener('click', function() {
+    var dateInput = document.getElementById('birthDate').value;
+    if (!dateInput) {
+      alert("請輸入出生日期！");
+      return;
+    }
+    var timeIndex = parseInt(document.getElementById('birthTime').value, 10);
+    var gender = document.querySelector('input[name="gender"]:checked').value;
+    var calType = document.querySelector('input[name="calendar"]:checked').value;
+    var isLeap = document.getElementById('leapMonth').checked;
+
+    // 使用 iztro 取得星盤物件
+    var options = {
+      type: calType,
+      dateStr: dateInput,
+      timeIndex: timeIndex,
+      gender: gender,
+      fixLeap: true,
+      language: 'zh-TW'
+    };
+    if (calType === 'lunar') {
+      options.isLeapMonth = isLeap;
+    }
+    // 產生星盤資料
+    var astrolabe;
+    try {
+      astrolabe = iztro.astro.withOptions(options);
+    } catch (e) {
+      console.error("排盤發生錯誤:", e);
+      alert("輸入的出生資料可能有誤，請確認後重試！");
+      return;
+    }
+
+    // 取得運限資料（包含當前流年星曜）
+    var horoscope = astrolabe.horoscope();  // 不傳參數則自動以系統當前日期計算
+
+    // 準備生年四化資料對照表（祿、權、科、忌）
+    var yearStem = astrolabe.chineseDate ? astrolabe.chineseDate.charAt(0) : ""; 
+    var fourTransformsMap = {
+      '甲': ['廉貞','破軍','武曲','太陽'],
+      '乙': ['天機','天梁','紫微','太陰'],
+      '丙': ['天同','天機','文昌','廉貞'],
+      '丁': ['太陰','天同','天機','巨門'],
+      '戊': ['貪狼','太陰','右弼','天機'],
+      '己': ['武曲','貪狼','天梁','文曲'],
+      '庚': ['太陽','武曲','太陰','天同'],
+      '辛': ['巨門','太陽','文曲','文昌'],
+      '壬': ['天梁','紫微','左輔','武曲'],
+      '癸': ['破軍','巨門','太陰','貪狼']
+    };
+    var fourTrans = yearStem && fourTransformsMap[yearStem] ? fourTransformsMap[yearStem] : null;
+    // fourTrans 會是一個包含4個星曜名稱的陣列，順序依次為 祿、權、科、忌 所對應的星曜
+
+    // 將中心中宮資料填入
+    var centerContent = "";
+    // 命主、身主、生肖、五行局、八字、生年四化等資料
+    centerContent += "<div><strong>命主</strong>：" + astrolabe.soul + "　<strong>身主</strong>：" + astrolabe.body + "</div>";
+    centerContent += "<div>生肖：" + astrolabe.zodiac + "　" + (astrolabe.fiveElementsClass ? "(" + astrolabe.fiveElementsClass + ")" : "") + "</div>";
+    // 出生年(西元)和時辰
+    centerContent += "<div>" + astrolabe.solarDate + "　" + astrolabe.time + "</div>";
+    // 農曆出生日期
+    if (astrolabe.lunarDate) {
+      centerContent += "<div>" + astrolabe.lunarDate + "　" + astrolabe.time + "</div>";
+    }
+    // 生辰八字（四柱）
+    centerContent += "<div>八字：" + astrolabe.chineseDate + "</div>";
+    // 生年四化
+    if (fourTrans) {
+      centerContent += "<div>生年四化：祿-" + fourTrans[0] + "、權-" + fourTrans[1] + "、科-" + fourTrans[2] + "、忌-" + fourTrans[3] + "</div>";
+    }
+
+    document.getElementById('center').innerHTML = centerContent;
+
+    // 取得目前西元年齡，用於標記流年所在宮位
+    var birth = new Date(dateInput);
+    var today = new Date();
+    // 計算實歲年齡
+    var age = today.getFullYear() - birth.getFullYear();
+    // 檢查生日是否已過
+    var hasHadBirthday = (today.getMonth() > birth.getMonth()) || 
+                         (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+    if (!hasHadBirthday) {
+      age -= 1;
+    }
+    if (age < 0) age = 0;
+
+    // 填入12宮資料
+    var yearlyStars = horoscope.yearly ? horoscope.yearly.stars : null;
+    astrolabe.palaces.forEach(function(palace, idx) {
+      var cell = document.getElementById('palace' + idx);
+      if (!cell) return;
+      // 宮位名稱和干支
+      var stemBranch = palace.heavenlyStem + palace.earthlyBranch;
+      var palaceName = palace.name;
+      cell.innerHTML = "<div class='palace-name'>" + palaceName + "（" + stemBranch + "）</div>";
+
+      // 彙總該宮的各類星曜名稱
+      var lines = [];
+      // 14主星（含祿存、天馬）列表
+      if (palace.majorStars && palace.majorStars.length > 0) {
+        var majors = palace.majorStars.map(function(star) { return star.name; });
+        lines.push(majors.join("、 "));
+      }
+      // 輔星（六吉六煞等）列表
+      if (palace.minorStars && palace.minorStars.length > 0) {
+        var minors = palace.minorStars.map(function(star) { return star.name; });
+        lines.push(minors.join("、 "));
+      }
+      // 雜曜列表
+      if (palace.adjectiveStars && palace.adjectiveStars.length > 0) {
+        var adjs = palace.adjectiveStars.map(function(star) { return star.name; });
+        lines.push(adjs.join("、 "));
+      }
+      // 流年星曜列表
+      if (yearlyStars && yearlyStars[idx] && yearlyStars[idx].length > 0) {
+        var liuStars = yearlyStars[idx].map(function(star) { return star.name; });
+        lines.push(liuStars.join("、 "));
+      }
+      // 將各行星曜輸出到該宮格
+      var starsHtml = "<div class='stars'>";
+      for (var i = 0; i < lines.length; i++) {
+        starsHtml += lines[i];
+        if (i < lines.length - 1) starsHtml += "<br>";
+      }
+      starsHtml += "</div>";
+      cell.innerHTML += starsHtml;
+
+      // 大限和流年資訊
+      var stageInfo = palace.stage ? palace.stage.range[0] + "-" + palace.stage.range[1] + "歲" : "";
+      // 判斷此宮位是否為當前年齡對應的小限宮位（流年宮）
+      var isCurrentYearPalace = (palace.ages && palace.ages.indexOf(age) !== -1);
+      var limitInfoHtml = "<div class='limit-info'>";
+      if (isCurrentYearPalace) {
+        limitInfoHtml += "<span class='current-year'>流年</span>";
+      }
+      if (stageInfo) {
+        limitInfoHtml += "大限 " + stageInfo;
+      }
+      limitInfoHtml += "</div>";
+      cell.innerHTML += limitInfoHtml;
+    });
+  });
+</script>
+
+</body>
+</html>
